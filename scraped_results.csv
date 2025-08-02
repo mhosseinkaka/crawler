@@ -1,4 +1,5 @@
-platform,url,install_count
-bazaar,cafebazaar.ir/app/com.bonbongame.kids.toddler.baby.care.games,+۱۰ هزار
-myket,myket.ir/app/com.leme.coe,۱ میلیون
-google_play,play.google.com/store/apps/details?id=com.fireshrike.dk&pcampaignid=merch_published_cluster_promotion_battlestar_featured_games,
+﻿package_url,platform,install_count
+cafebazaar.ir/app/com.bonbongame.kids.toddler.baby.care.games,bazaar,+۱۰ هزار
+myket.ir/app/com.leme.coe,myket,۱ میلیون
+play.google.com/store/apps/details?id=com.fireshrike.dk&pcampaignid=merch_published_cluster_promotion_battlestar_featured_games,google_play,1M+
+play.google.com/store/apps/details?id=com.supercell.clashroyale&pcampaignid=merch_published_cluster_promotion_battlestar_featured_games&hl=en,google_play,500M+
