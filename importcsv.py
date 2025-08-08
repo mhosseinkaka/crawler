@@ -10,125 +10,80 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 # Chrome Driver Configuration
 options = Options()
-options.add_argument('--headless')  # Run browser in headless mode (no GUI)
+options.add_argument('--headless')  # Run browser in headless mode
 options.add_argument('--disable-gpu')  # Disable GPU acceleration
+options.add_argument('--no-sandbox')  # Bypass OS security model
+options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
 
 service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service, options=options)
 
-def detect_platform_and_extract_url(package_url):
-    """
-    Detect the app store platform from URL and return platform name with full URL
-    
-    شناسایی پلتفرم فروشگاه برنامه از روی URL و برگرداندن نام پلتفرم با URL کامل
-    
-    Args:
-        package_url (str): The URL of the application
-        package_url (str): آدرس برنامه در فروشگاه
-        
-    Returns:
-        tuple: (platform_name, full_url) where platform_name is one of:
-        tuple: (نام پلتفرم, آدرس کامل) که نام پلتفرم می‌تواند یکی از موارد زیر باشد:
-            - 'bazaar' (کافه بازار)
-            - 'myket' (مایکت)
-            - 'google_play' (گوگل پلی)
-            - 'unknown' (ناشناخته)
-    """
-    if 'cafebazaar.ir' in package_url:
-        return 'bazaar', package_url
-    elif 'myket.ir' in package_url:
-        return 'myket', package_url
-    elif 'play.google.com' in package_url:
-        return 'google_play', package_url
-    else:
-        return 'unknown', package_url
+# Define search URL patterns
+MARKET_URLS = {
+    'bazaar': 'https://cafebazaar.ir/app/{}',
+    'myket': 'https://myket.ir/app/{}',
+    'google_play': 'https://play.google.com/store/apps/details?id={}&hl=en'
+}
 
-def extract_install_count(platform, url):
-    """
-    Extract installation count from the specified app store platform
-    
-    استخراج تعداد نصب‌ها از پلتفرم فروشگاه برنامه مشخص شده
-    
-    Args:
-        platform (str): The platform name ('bazaar', 'myket', 'google_play')
-        platform (str): نام پلتفرم
-        url (str): The full URL of the application page
-        url (str): آدرس کامل صفحه برنامه
-        
-    Returns:
-        str: The installation count text or error message
-        str: متن تعداد نصب یا پیغام خطا
-    """
+def extract_install_count(platform, package_name):
     try:
-        if not url.startswith("http"):
-            url = "https://" + url
+        url = MARKET_URLS[platform].format(package_name)
         driver.get(url)
-        time.sleep(2)  # Wait for page to load
+        time.sleep(2)  # Let the JS content load
 
-        if platform == "bazaar":
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".InfoCube__content"))
-            )
-            el = driver.find_element(By.CSS_SELECTOR, ".InfoCube__content")
-            return el.text.strip()
+        if platform == 'bazaar':
+            try:
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".InfoCube__content"))
+                )
+                el = driver.find_element(By.CSS_SELECTOR, ".InfoCube__content")
+                return el.text.strip()
+            except:
+                return 'موجود نیست'
 
-        elif platform == "myket":
-            el = driver.find_element(By.XPATH, '/html/body/main/section[1]/div[2]/table/tbody/tr[3]/td[2]')
-            return el.text.strip()
+        elif platform == 'myket':
+            try:
+                el = driver.find_element(By.XPATH, '/html/body/main/section[1]/div[2]/table/tbody/tr[3]/td[2]')
+                return el.text.strip()
+            except:
+                return 'موجود نیست'
 
-        elif platform == "google_play":
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//div[.='Downloads' or .='نصب‌ها']/preceding-sibling::div[1]"))
-            )
-            el = driver.find_element(By.XPATH, "//div[.='Downloads' or .='نصب‌ها']/preceding-sibling::div[1]")
-            return el.text.strip()
-
-        else:
-            return 'پلتفرم ناشناس'
+        elif platform == 'google_play':
+            try:
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[text()='Downloads' or text()='نصب‌ها']/preceding-sibling::div[1]"))
+                )
+                el = driver.find_element(By.XPATH, "//div[text()='Downloads' or text()='نصب‌ها']/preceding-sibling::div[1]")
+                return el.text.strip()
+            except:
+                return 'موجود نیست'
 
     except Exception as e:
-        print(f"❌ خطا در {url}: {e}")
+        print(f"خطا در بررسی {platform} برای {package_name}: {e}")
         return 'خطا'
 
-# Main execution
+# --- MAIN EXECUTION ---
 if __name__ == "__main__":
-    """
-    Main script to extract installation counts from app store URLs
-    
-    اسکریپت اصلی برای استخراج تعداد نصب‌ها از آدرس‌های فروشگاه برنامه
-    
-    Input:
-        Requires 'apps.csv' file with 'package_name' column containing app URLs
-        نیاز به فایل 'apps.csv' با ستون 'package_name' حاوی آدرس برنامه‌ها
-        
-    Output:
-        Generates 'scraped_results.csv' with columns:
-        تولید فایل 'scraped_results.csv' با ستون‌های:
-            - package_url: آدرس برنامه
-            - platform: پلتفرم
-            - install_count: تعداد نصب
-    """
-    # Read input CSV
-    df = pd.read_csv('apps.csv')
-    
+    df = pd.read_csv('apps.csv', header=None, names=['package_name'])
     results = []
-    
-    # Process each app URL
-    for _, row in df.iterrows():
-        package_url = row['package_name']
-        platform, full_url = detect_platform_and_extract_url(package_url)
-        install_count = extract_install_count(platform, full_url)
 
-        print(f"{platform.upper()} | {package_url} → {install_count}")
+    for i, row in df.iterrows():
+        pkg = row['package_name']
+        bazaar = extract_install_count('bazaar', pkg)
+        myket = extract_install_count('myket', pkg)
+        google = extract_install_count('google_play', pkg)
 
         results.append({
-            'package_url': package_url,
-            'platform': platform,
-            'install_count': install_count
+            'package_name': pkg,
+            'bazaar_installs': bazaar,
+            'myket_installs': myket,
+            'google_play_installs': google
         })
 
-    # Save results
+        print(f"{pkg} → بازار: {bazaar} | مایکت: {myket} | گوگل پلی: {google}")
+
+        # Optional delay to avoid overloading servers
+        time.sleep(1)
+
     pd.DataFrame(results).to_csv('scraped_results.csv', index=False, encoding='utf-8-sig')
-    
-    # Clean up
     driver.quit()
